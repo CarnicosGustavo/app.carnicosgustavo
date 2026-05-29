@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+export type Unit = 'piezas' | 'kg'
+
 export type OrderItem = {
   productId: string
   name: string
   quantity: number
+  unit: Unit
 }
 
 const STORAGE_KEY = 'cg_pedido_v1'
@@ -20,7 +23,8 @@ function loadFromStorage(): OrderItem[] {
         if (typeof item.productId !== 'string' || typeof item.name !== 'string') return null
         const qty = Number(item.quantity)
         if (!Number.isFinite(qty) || qty < 1) return null
-        return { productId: item.productId, name: item.name, quantity: Math.floor(qty) }
+        const unit: Unit = item.unit === 'kg' ? 'kg' : 'piezas'
+        return { productId: item.productId, name: item.name, quantity: Math.floor(qty), unit }
       })
       .filter(Boolean) as OrderItem[]
   } catch {
@@ -40,12 +44,17 @@ export function useOrder() {
     [items],
   )
 
+  const getItem = useCallback(
+    (productId: string) => items.find((x) => x.productId === productId),
+    [items],
+  )
+
   const getQuantity = useCallback(
     (productId: string) => items.find((x) => x.productId === productId)?.quantity ?? 0,
     [items],
   )
 
-  const add = useCallback((productId: string, name: string) => {
+  const add = useCallback((productId: string, name: string, unit: Unit = 'piezas') => {
     setItems((prev) => {
       const existing = prev.find((x) => x.productId === productId)
       if (existing) {
@@ -53,7 +62,7 @@ export function useOrder() {
           x.productId === productId ? { ...x, quantity: x.quantity + 1 } : x,
         )
       }
-      return [...prev, { productId, name, quantity: 1 }]
+      return [...prev, { productId, name, quantity: 1, unit }]
     })
   }, [])
 
@@ -76,6 +85,12 @@ export function useOrder() {
     })
   }, [])
 
+  const setUnit = useCallback((productId: string, unit: Unit) => {
+    setItems((prev) =>
+      prev.map((x) => (x.productId === productId ? { ...x, unit } : x)),
+    )
+  }, [])
+
   const setQuantity = useCallback((productId: string, qty: number) => {
     if (qty <= 0) {
       setItems((prev) => prev.filter((x) => x.productId !== productId))
@@ -96,5 +111,23 @@ export function useOrder() {
     setItems([])
   }, [])
 
-  return { items, totalItems, getQuantity, add, increment, decrement, setQuantity, remove, clear }
+  // Reemplaza todo el pedido (usado al "repetir pedido anterior")
+  const replaceAll = useCallback((next: OrderItem[]) => {
+    setItems(next)
+  }, [])
+
+  return {
+    items,
+    totalItems,
+    getItem,
+    getQuantity,
+    add,
+    increment,
+    decrement,
+    setUnit,
+    setQuantity,
+    remove,
+    clear,
+    replaceAll,
+  }
 }

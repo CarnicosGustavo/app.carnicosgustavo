@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { BUSINESS, CONTACT } from '../config'
-import type { OrderItem } from '../hooks/useOrder'
+import type { OrderItem, Unit } from '../hooks/useOrder'
 import { buildWhatsAppMessage, buildWhatsAppUrl } from '../lib/whatsapp'
 
 type SaveState = 'idle' | 'saving' | 'success' | 'error'
@@ -14,6 +14,8 @@ type Props = {
   onDecrement: (id: string) => void
   onRemove: (id: string) => void
   onClear: () => void
+  onSetUnit: (id: string, unit: Unit) => void
+  onReplaceAll: (items: OrderItem[]) => void
 }
 
 const CUSTOMER_STORAGE_KEY = 'cg_pedido_customer_v1'
@@ -34,7 +36,17 @@ function loadCustomer() {
   }
 }
 
-export function CartSheet({ open, items, onClose, onIncrement, onDecrement, onRemove, onClear }: Props) {
+export function CartSheet({
+  open,
+  items,
+  onClose,
+  onIncrement,
+  onDecrement,
+  onRemove,
+  onClear,
+  onSetUnit,
+  onReplaceAll,
+}: Props) {
   const customer = useRef(loadCustomer())
   const [businessName, setBusinessName] = useState(customer.current.businessName)
   const [contactName, setContactName] = useState(customer.current.contactName)
@@ -43,6 +55,64 @@ export function CartSheet({ open, items, onClose, onIncrement, onDecrement, onRe
   const [notes, setNotes] = useState(customer.current.notes)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [saveError, setSaveError] = useState('')
+
+  // "Repetir pedido anterior" por teléfono
+  const [lastOrder, setLastOrder] = useState<{
+    businessName: string
+    contactName: string
+    deliveryAddress: string
+    items: OrderItem[]
+  } | null>(null)
+  const [lookupDone, setLookupDone] = useState(false)
+
+  // Busca el último pedido cuando el cliente termina de escribir el teléfono
+  async function lookupLastOrder() {
+    const digits = phone.replace(/[^\d]/g, '')
+    if (digits.length < 7) return
+    try {
+      const resp = await fetch(`/api/last-order?phone=${encodeURIComponent(digits)}`)
+      const data = (await resp.json()) as {
+        ok?: boolean
+        found?: boolean
+        order?: {
+          businessName: string
+          contactName: string
+          deliveryAddress: string
+          items: { productId: string; name: string; quantity: number; unit?: string }[]
+        }
+      }
+      setLookupDone(true)
+      if (data.found && data.order) {
+        setLastOrder({
+          businessName: data.order.businessName,
+          contactName: data.order.contactName,
+          deliveryAddress: data.order.deliveryAddress,
+          items: data.order.items.map((it) => ({
+            productId: it.productId,
+            name: it.name,
+            quantity: it.quantity,
+            unit: it.unit === 'kg' ? 'kg' : 'piezas',
+          })),
+        })
+        // Autocompletar datos del negocio si están vacíos
+        if (!businessName && data.order.businessName) setBusinessName(data.order.businessName)
+        if (!contactName && data.order.contactName) setContactName(data.order.contactName)
+        if (!deliveryAddress && data.order.deliveryAddress)
+          setDeliveryAddress(data.order.deliveryAddress)
+      } else {
+        setLastOrder(null)
+      }
+    } catch {
+      setLookupDone(true)
+    }
+  }
+
+  function repeatLastOrder() {
+    if (lastOrder && lastOrder.items.length > 0) {
+      onReplaceAll(lastOrder.items)
+      setLastOrder(null)
+    }
+  }
 
   // Guardar datos del cliente en localStorage
   useEffect(() => {
@@ -199,38 +269,63 @@ export function CartSheet({ open, items, onClose, onIncrement, onDecrement, onRe
                     {items.map((item) => (
                       <div
                         key={item.productId}
-                        className="flex items-center justify-between gap-2 rounded-lg bg-cg-gray/60 px-3 py-2"
+                        className="rounded-lg bg-cg-gray/60 px-3 py-2"
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold leading-tight text-cg-black">
-                            {item.name}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold leading-tight text-cg-black">
+                              {item.name}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => onDecrement(item.productId)}
+                              className="flex h-8 w-8 items-center justify-center rounded-md border border-black/10 text-sm font-bold active:bg-white"
+                            >
+                              -
+                            </button>
+                            <span className="w-8 text-center text-sm font-bold">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => onIncrement(item.productId)}
+                              className="flex h-8 w-8 items-center justify-center rounded-md bg-cg-red text-sm font-bold text-white active:bg-cg-red-dark"
+                            >
+                              +
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onRemove(item.productId)}
+                              className="ml-1 flex h-8 w-8 items-center justify-center rounded-md text-black/30 active:text-red-500"
+                              aria-label="Eliminar"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1">
+                        {/* Selector de unidad por item */}
+                        <div className="mt-1.5 inline-flex overflow-hidden rounded-md border border-black/10">
                           <button
                             type="button"
-                            onClick={() => onDecrement(item.productId)}
-                            className="flex h-8 w-8 items-center justify-center rounded-md border border-black/10 text-sm font-bold active:bg-white"
+                            onClick={() => onSetUnit(item.productId, 'piezas')}
+                            className={[
+                              'px-2.5 py-0.5 text-[11px] font-bold transition-colors',
+                              item.unit === 'piezas' ? 'bg-cg-red text-white' : 'bg-white text-cg-black',
+                            ].join(' ')}
                           >
-                            -
-                          </button>
-                          <span className="w-8 text-center text-sm font-bold">{item.quantity}</span>
-                          <button
-                            type="button"
-                            onClick={() => onIncrement(item.productId)}
-                            className="flex h-8 w-8 items-center justify-center rounded-md bg-cg-red text-sm font-bold text-white active:bg-cg-red-dark"
-                          >
-                            +
+                            Piezas
                           </button>
                           <button
                             type="button"
-                            onClick={() => onRemove(item.productId)}
-                            className="ml-1 flex h-8 w-8 items-center justify-center rounded-md text-black/30 active:text-red-500"
-                            aria-label="Eliminar"
+                            onClick={() => onSetUnit(item.productId, 'kg')}
+                            className={[
+                              'px-2.5 py-0.5 text-[11px] font-bold transition-colors',
+                              item.unit === 'kg' ? 'bg-cg-red text-white' : 'bg-white text-cg-black',
+                            ].join(' ')}
                           >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                            Kg
                           </button>
                         </div>
                       </div>
@@ -257,11 +352,41 @@ export function CartSheet({ open, items, onClose, onIncrement, onDecrement, onRe
                   />
                   <input
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      setPhone(e.target.value)
+                      setLookupDone(false)
+                      setLastOrder(null)
+                    }}
+                    onBlur={lookupLastOrder}
                     placeholder="Telefono *"
                     inputMode="tel"
                     className="w-full rounded-xl border border-black/10 bg-cg-gray px-4 py-3 text-sm outline-none placeholder:text-black/40 focus:border-cg-red"
                   />
+
+                  {/* Banner repetir pedido anterior */}
+                  {lastOrder && lastOrder.items.length > 0 && (
+                    <div className="rounded-xl border border-cg-red/20 bg-cg-red/5 p-3">
+                      <div className="text-xs font-bold text-cg-black">
+                        Encontramos tu pedido anterior
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-black/50">
+                        {lastOrder.items.length} productos
+                        {lastOrder.businessName ? ` · ${lastOrder.businessName}` : ''}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={repeatLastOrder}
+                        className="mt-2 w-full rounded-lg bg-cg-red px-3 py-2 text-xs font-bold text-white active:bg-cg-red-dark"
+                      >
+                        Repetir pedido anterior
+                      </button>
+                    </div>
+                  )}
+                  {lookupDone && !lastOrder && phone.replace(/[^\d]/g, '').length >= 7 && (
+                    <div className="text-[11px] text-black/40">
+                      Sin pedidos anteriores con este teléfono.
+                    </div>
+                  )}
                   <input
                     value={deliveryAddress}
                     onChange={(e) => setDeliveryAddress(e.target.value)}

@@ -67,9 +67,11 @@ function App() {
                 key={product.id}
                 product={product}
                 quantity={order.getQuantity(product.id)}
+                unit={order.getItem(product.id)?.unit ?? "piezas"}
                 onAdd={() => order.add(product.id, product.name)}
                 onIncrement={() => order.increment(product.id)}
                 onDecrement={() => order.decrement(product.id)}
+                onSetUnit={(u) => order.setUnit(product.id, u)}
               />
             ))}
           </div>
@@ -110,6 +112,8 @@ function App() {
         onDecrement={order.decrement}
         onRemove={order.remove}
         onClear={order.clear}
+        onSetUnit={order.setUnit}
+        onReplaceAll={order.replaceAll}
       />
     </div>
   )
