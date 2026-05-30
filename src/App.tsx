@@ -72,6 +72,7 @@ function App() {
                 onIncrement={() => order.increment(product.id)}
                 onDecrement={() => order.decrement(product.id)}
                 onSetUnit={(u) => order.setUnit(product.id, u)}
+                onSetQuantity={(q) => order.setQuantity(product.id, q)}
               />
             ))}
           </div>
@@ -113,6 +114,7 @@ function App() {
         onRemove={order.remove}
         onClear={order.clear}
         onSetUnit={order.setUnit}
+        onSetQuantity={order.setQuantity}
         onReplaceAll={order.replaceAll}
       />
     </div>

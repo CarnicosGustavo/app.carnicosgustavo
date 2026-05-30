@@ -9,6 +9,7 @@ type Props = {
   onIncrement: () => void
   onDecrement: () => void
   onSetUnit: (unit: Unit) => void
+  onSetQuantity: (qty: number) => void
 }
 
 export function ProductRow({
@@ -19,6 +20,7 @@ export function ProductRow({
   onIncrement,
   onDecrement,
   onSetUnit,
+  onSetQuantity,
 }: Props) {
   const inOrder = quantity > 0
 
@@ -47,9 +49,18 @@ export function ProductRow({
             >
               -
             </button>
-            <div className="flex h-9 w-10 items-center justify-center text-sm font-bold text-cg-black">
-              {quantity}
-            </div>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={quantity}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10)
+                onSetQuantity(Number.isFinite(v) ? Math.max(0, v) : 0)
+              }}
+              onFocus={(e) => e.currentTarget.select()}
+              className="h-9 w-12 rounded-lg border border-black/12 text-center text-sm font-bold text-cg-black outline-none focus:border-cg-red"
+              aria-label="Cantidad"
+            />
             <button
               type="button"
               onClick={onIncrement}

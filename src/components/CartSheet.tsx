@@ -15,6 +15,7 @@ type Props = {
   onRemove: (id: string) => void
   onClear: () => void
   onSetUnit: (id: string, unit: Unit) => void
+  onSetQuantity: (id: string, qty: number) => void
   onReplaceAll: (items: OrderItem[]) => void
 }
 
@@ -45,6 +46,7 @@ export function CartSheet({
   onRemove,
   onClear,
   onSetUnit,
+  onSetQuantity,
   onReplaceAll,
 }: Props) {
   const customer = useRef(loadCustomer())
@@ -67,8 +69,8 @@ export function CartSheet({
   const [lookupDone, setLookupDone] = useState(false)
 
   // Busca el último pedido cuando el cliente termina de escribir el teléfono
-  async function lookupLastOrder() {
-    const digits = phone.replace(/[^\d]/g, '')
+  async function lookupLastOrder(phoneArg?: string) {
+    const digits = (phoneArg ?? phone).replace(/[^\d]/g, '')
     if (digits.length < 7) return
     try {
       const resp = await fetch(`/api/last-order?phone=${encodeURIComponent(digits)}`)
@@ -114,6 +116,23 @@ export function CartSheet({
       setLastOrder(null)
     }
   }
+
+  // Pre-rellena el teléfono si viene en el link (?tel= o ?phone=) y busca su
+  // pedido anterior. Permite mandar links personalizados por WhatsApp = cero fricción.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const urlPhone = (params.get('tel') ?? params.get('phone') ?? '').replace(/[^\d]/g, '')
+      if (urlPhone.length >= 7) {
+        setPhone(urlPhone)
+        lookupLastOrder(urlPhone)
+      }
+    } catch {
+      /* noop */
+    }
+    // Solo al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Guardar datos del cliente en localStorage
   useEffect(() => {
@@ -294,7 +313,17 @@ export function CartSheet({
                             >
                               -
                             </button>
-                            <span className="w-8 text-center text-sm font-bold">{item.quantity}</span>
+                            <input
+                            type="number"
+                            inputMode="numeric"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const v = parseInt(e.target.value, 10)
+                              onSetQuantity(item.productId, Number.isFinite(v) ? Math.max(0, v) : 0)
+                            }}
+                            onFocus={(e) => e.currentTarget.select()}
+                            className="h-8 w-12 rounded-md border border-black/10 text-center text-sm font-bold outline-none focus:border-cg-red"
+                          />
                             <button
                               type="button"
                               onClick={() => onIncrement(item.productId)}
@@ -366,7 +395,7 @@ export function CartSheet({
                       setLookupDone(false)
                       setLastOrder(null)
                     }}
-                    onBlur={lookupLastOrder}
+                    onBlur={() => lookupLastOrder()}
                     placeholder="Telefono *"
                     inputMode="tel"
                     className="w-full rounded-xl border border-black/10 bg-cg-gray px-4 py-3 text-sm outline-none placeholder:text-black/40 focus:border-cg-red"
