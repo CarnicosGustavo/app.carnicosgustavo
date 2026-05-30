@@ -22,9 +22,9 @@ function loadFromStorage(): OrderItem[] {
       .map((item: Record<string, unknown>) => {
         if (typeof item.productId !== 'string' || typeof item.name !== 'string') return null
         const qty = Number(item.quantity)
-        if (!Number.isFinite(qty) || qty < 1) return null
+        if (!Number.isFinite(qty) || qty <= 0) return null
         const unit: Unit = item.unit === 'kg' ? 'kg' : 'piezas'
-        return { productId: item.productId, name: item.name, quantity: Math.floor(qty), unit }
+        return { productId: item.productId, name: item.name, quantity: qty, unit }
       })
       .filter(Boolean) as OrderItem[]
   } catch {
@@ -95,9 +95,11 @@ export function useOrder() {
     if (qty <= 0) {
       setItems((prev) => prev.filter((x) => x.productId !== productId))
     } else {
+      // Permite decimales (kg/gramos), redondeado a 3 decimales
+      const rounded = Math.round(qty * 1000) / 1000
       setItems((prev) =>
         prev.map((x) =>
-          x.productId === productId ? { ...x, quantity: Math.floor(qty) } : x,
+          x.productId === productId ? { ...x, quantity: rounded } : x,
         ),
       )
     }

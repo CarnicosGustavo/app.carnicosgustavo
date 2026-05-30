@@ -1,5 +1,6 @@
 import type { Product } from '../data/products'
 import type { Unit } from '../hooks/useOrder'
+import { QtyInput } from './QtyInput'
 
 type Props = {
   product: Product
@@ -49,17 +50,10 @@ export function ProductRow({
             >
               -
             </button>
-            <input
-              type="number"
-              inputMode="numeric"
+            <QtyInput
               value={quantity}
-              onChange={(e) => {
-                const v = parseInt(e.target.value, 10)
-                onSetQuantity(Number.isFinite(v) ? Math.max(0, v) : 0)
-              }}
-              onFocus={(e) => e.currentTarget.select()}
-              className="h-9 w-12 rounded-lg border border-black/12 text-center text-sm font-bold text-cg-black outline-none focus:border-cg-red"
-              aria-label="Cantidad"
+              onChange={onSetQuantity}
+              className="h-9 w-14 rounded-lg border border-black/12 text-center text-sm font-bold text-cg-black outline-none focus:border-cg-red"
             />
             <button
               type="button"

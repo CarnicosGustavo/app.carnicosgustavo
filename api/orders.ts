@@ -58,7 +58,8 @@ function asItems(value: unknown): OrderItem[] {
       if (!productId || !name) return null
       if (!Number.isFinite(quantity) || quantity <= 0) return null
       const unit: 'piezas' | 'kg' = o.unit === 'kg' ? 'kg' : 'piezas'
-      return { productId, name, quantity: Math.floor(quantity), unit }
+      // Conserva decimales (kg/gramos), máx 3 decimales
+      return { productId, name, quantity: Math.round(quantity * 1000) / 1000, unit }
     })
     .filter((x): x is OrderItem => Boolean(x))
 }

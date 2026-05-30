@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BUSINESS, CONTACT } from '../config'
 import type { OrderItem, Unit } from '../hooks/useOrder'
 import { buildWhatsAppMessage, buildWhatsAppUrl } from '../lib/whatsapp'
+import { QtyInput } from './QtyInput'
 
 type SaveState = 'idle' | 'saving' | 'success' | 'error'
 
@@ -313,16 +314,10 @@ export function CartSheet({
                             >
                               -
                             </button>
-                            <input
-                            type="number"
-                            inputMode="numeric"
+                            <QtyInput
                             value={item.quantity}
-                            onChange={(e) => {
-                              const v = parseInt(e.target.value, 10)
-                              onSetQuantity(item.productId, Number.isFinite(v) ? Math.max(0, v) : 0)
-                            }}
-                            onFocus={(e) => e.currentTarget.select()}
-                            className="h-8 w-12 rounded-md border border-black/10 text-center text-sm font-bold outline-none focus:border-cg-red"
+                            onChange={(q) => onSetQuantity(item.productId, q)}
+                            className="h-8 w-14 rounded-md border border-black/10 text-center text-sm font-bold outline-none focus:border-cg-red"
                           />
                             <button
                               type="button"
