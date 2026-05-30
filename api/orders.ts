@@ -124,5 +124,17 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return
   }
 
-  json(res, 200, { ok: true, id: data?.id })
+  // El trigger crea la orden del dashboard al instante. Recuperamos su número
+  // (id secuencial) para mostrarlo al cliente y en el mensaje de WhatsApp.
+  let orderNumber: number | null = null
+  if (data?.id) {
+    const { data: ord } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('web_order_id', data.id)
+      .maybeSingle()
+    orderNumber = (ord?.id as number) ?? null
+  }
+
+  json(res, 200, { ok: true, id: data?.id, orderNumber })
 }

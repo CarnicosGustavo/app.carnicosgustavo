@@ -12,11 +12,13 @@ export function buildWhatsAppMessage(params: {
   checkout: CheckoutInfo
   items: OrderItem[]
   locationLabel: string
+  orderNumber?: number | null
 }) {
-  const { checkout, items, locationLabel } = params
+  const { checkout, items, locationLabel, orderNumber } = params
 
   const lines: string[] = []
   lines.push('*Pedido - Carnicos Gustavo*')
+  if (orderNumber) lines.push(`*Pedido #${orderNumber}*`)
   lines.push(`CEDIS: ${locationLabel}`)
   lines.push('')
   lines.push(`Negocio: ${checkout.businessName}`)

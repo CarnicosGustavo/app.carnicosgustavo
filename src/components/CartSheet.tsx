@@ -55,6 +55,7 @@ export function CartSheet({
   const [notes, setNotes] = useState(customer.current.notes)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [saveError, setSaveError] = useState('')
+  const [orderNumber, setOrderNumber] = useState<number | null>(null)
 
   // "Repetir pedido anterior" por teléfono
   const [lastOrder, setLastOrder] = useState<{
@@ -168,8 +169,9 @@ export function CartSheet({
         const data = (await resp.json().catch(() => ({}))) as { error?: string }
         throw new Error(data.error || `HTTP ${resp.status}`)
       }
-      const data = (await resp.json()) as { ok?: boolean; id?: string }
+      const data = (await resp.json()) as { ok?: boolean; id?: string; orderNumber?: number | null }
       if (!data.id) throw new Error('Sin ID')
+      setOrderNumber(data.orderNumber ?? null)
       setSaveState('success')
     } catch (e) {
       setSaveState('error')
@@ -182,6 +184,7 @@ export function CartSheet({
       checkout: { businessName, contactName, phone, deliveryAddress, notes },
       items,
       locationLabel: BUSINESS.locationLabel,
+      orderNumber,
     })
     const url = buildWhatsAppUrl(CONTACT.whatsappPhoneE164, message)
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -190,6 +193,7 @@ export function CartSheet({
   function handleNewOrder() {
     setSaveState('idle')
     setSaveError('')
+    setOrderNumber(null)
     setNotes('')
     onClear()
   }
@@ -231,6 +235,11 @@ export function CartSheet({
                 &#10003;
               </div>
               <div className="text-lg font-bold text-cg-black">Pedido enviado</div>
+              {orderNumber && (
+                <div className="rounded-full bg-cg-red/10 px-4 py-1 text-base font-bold text-cg-red">
+                  Pedido #{orderNumber}
+                </div>
+              )}
               <div className="text-sm text-black/60">
                 Tu pedido fue registrado exitosamente. Te contactaremos pronto.
               </div>
