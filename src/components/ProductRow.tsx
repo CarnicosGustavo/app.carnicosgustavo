@@ -1,4 +1,4 @@
-import { productEmoji, type Product } from '../data/products'
+import { CATEGORY_META, type Product } from '../data/products'
 import type { Unit } from '../hooks/useOrder'
 import { QtyInput } from './QtyInput'
 
@@ -24,29 +24,28 @@ export function ProductRow({
   onSetQuantity,
 }: Props) {
   const inOrder = quantity > 0
+  const meta = CATEGORY_META[product.category]
 
   return (
     <div
       className={[
         'rounded-2xl border bg-white px-3 py-3 transition-colors active:bg-cg-gray/60',
-        inOrder ? 'border-cg-red/40 ring-1 ring-cg-red/20' : 'border-black/8',
+        inOrder ? 'border-black/20' : 'border-black/8',
       ].join(' ')}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="shrink-0 text-base leading-none" aria-hidden>
-            {productEmoji(product)}
-          </span>
-          <div className="text-[15px] font-extrabold leading-tight text-cg-black">
-            {product.name}
-          </div>
+        <div className="min-w-0 flex-1 text-[15px] font-extrabold leading-tight text-cg-black">
+          {product.name}
         </div>
 
         {!inOrder ? (
           <button
             type="button"
             onClick={onAdd}
-            className="shrink-0 rounded-xl bg-cg-red px-4 py-2.5 text-sm font-bold text-white shadow-sm active:bg-cg-red-dark"
+            className={[
+              'shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm',
+              meta.solid,
+            ].join(' ')}
           >
             + Agregar
           </button>
@@ -55,7 +54,10 @@ export function ProductRow({
             <button
               type="button"
               onClick={onDecrement}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-black/12 text-base font-bold text-cg-black active:bg-cg-gray"
+              className={[
+                'flex h-9 w-9 items-center justify-center rounded-lg border text-lg font-bold',
+                meta.outline,
+              ].join(' ')}
               aria-label="Quitar uno"
             >
               -
@@ -63,12 +65,15 @@ export function ProductRow({
             <QtyInput
               value={quantity}
               onChange={onSetQuantity}
-              className="h-9 w-14 rounded-lg border border-black/12 text-center text-sm font-bold text-cg-black outline-none focus:border-cg-red"
+              className="h-9 w-14 rounded-lg border border-black/12 text-center text-sm font-bold text-cg-black outline-none focus:border-black/40"
             />
             <button
               type="button"
               onClick={onIncrement}
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-cg-red text-base font-bold text-white active:bg-cg-red-dark"
+              className={[
+                'flex h-9 w-9 items-center justify-center rounded-lg text-lg font-bold',
+                meta.solid,
+              ].join(' ')}
               aria-label="Agregar uno"
             >
               +
@@ -87,7 +92,7 @@ export function ProductRow({
               onClick={() => onSetUnit('piezas')}
               className={[
                 'px-3 py-1 text-xs font-bold transition-colors',
-                unit === 'piezas' ? 'bg-cg-red text-white' : 'bg-white text-cg-black',
+                unit === 'piezas' ? meta.solid : 'bg-white text-cg-black',
               ].join(' ')}
             >
               Piezas
@@ -97,7 +102,7 @@ export function ProductRow({
               onClick={() => onSetUnit('kg')}
               className={[
                 'px-3 py-1 text-xs font-bold transition-colors',
-                unit === 'kg' ? 'bg-cg-red text-white' : 'bg-white text-cg-black',
+                unit === 'kg' ? meta.solid : 'bg-white text-cg-black',
               ].join(' ')}
             >
               Kg

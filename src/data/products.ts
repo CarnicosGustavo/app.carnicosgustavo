@@ -27,97 +27,60 @@ export const CATEGORIES: { id: Category; label: string }[] = [
   { id: 'otros', label: 'Otros' },
 ]
 
-// Estilo por categoría: emoji + colores (clases completas para que Tailwind las
-// detecte). chip = inactivo, chipActive = seleccionado, iconBg = fondo del icono.
+// Color de los botones (+ / - / Agregar / toggle) según la categoría.
+// Clases completas para que Tailwind las detecte. El nombre va siempre en negro.
 export type CategoryStyle = {
   label: string
-  emoji: string
-  chip: string
-  chipActive: string
-  iconBg: string
+  solid: string // botón sólido: + e "+ Agregar" y toggle activo
+  outline: string // botón outline: -
 }
 
 export const CATEGORY_META: Record<Category, CategoryStyle> = {
   todos: {
     label: 'Todos',
-    emoji: '🍽️',
-    chip: 'bg-cg-gray text-cg-black',
-    chipActive: 'bg-cg-black text-white',
-    iconBg: 'bg-cg-gray',
+    solid: 'bg-cg-black text-white active:bg-black',
+    outline: 'border-black/20 text-cg-black active:bg-cg-gray',
   },
   canales: {
     label: 'Canales',
-    emoji: '🐷',
-    chip: 'bg-rose-50 text-rose-700',
-    chipActive: 'bg-rose-600 text-white',
-    iconBg: 'bg-rose-100',
+    solid: 'bg-rose-600 text-white active:bg-rose-700',
+    outline: 'border-rose-300 text-rose-700 active:bg-rose-50',
   },
   lomos: {
     label: 'Lomos',
-    emoji: '🥩',
-    chip: 'bg-red-50 text-red-700',
-    chipActive: 'bg-red-600 text-white',
-    iconBg: 'bg-red-100',
+    solid: 'bg-red-600 text-white active:bg-red-700',
+    outline: 'border-red-300 text-red-700 active:bg-red-50',
   },
   jamones: {
     label: 'Jamones',
-    emoji: '🍗',
-    chip: 'bg-amber-50 text-amber-700',
-    chipActive: 'bg-amber-500 text-white',
-    iconBg: 'bg-amber-100',
+    solid: 'bg-amber-500 text-white active:bg-amber-600',
+    outline: 'border-amber-300 text-amber-700 active:bg-amber-50',
   },
   cueros: {
     label: 'Cueros',
-    emoji: '🥓',
-    chip: 'bg-orange-50 text-orange-700',
-    chipActive: 'bg-orange-500 text-white',
-    iconBg: 'bg-orange-100',
+    solid: 'bg-orange-500 text-white active:bg-orange-600',
+    outline: 'border-orange-300 text-orange-700 active:bg-orange-50',
   },
   pulpas: {
     label: 'Pulpas',
-    emoji: '🍖',
-    chip: 'bg-pink-50 text-pink-700',
-    chipActive: 'bg-pink-600 text-white',
-    iconBg: 'bg-pink-100',
+    solid: 'bg-pink-600 text-white active:bg-pink-700',
+    outline: 'border-pink-300 text-pink-700 active:bg-pink-50',
   },
   visceras: {
     label: 'Vísceras',
-    emoji: '🫀',
-    chip: 'bg-purple-50 text-purple-700',
-    chipActive: 'bg-purple-600 text-white',
-    iconBg: 'bg-purple-100',
+    solid: 'bg-purple-600 text-white active:bg-purple-700',
+    outline: 'border-purple-300 text-purple-700 active:bg-purple-50',
   },
   huesos: {
     label: 'Huesos',
-    emoji: '🦴',
-    chip: 'bg-stone-100 text-stone-700',
-    chipActive: 'bg-stone-600 text-white',
-    iconBg: 'bg-stone-200',
+    solid: 'bg-stone-600 text-white active:bg-stone-700',
+    outline: 'border-stone-300 text-stone-700 active:bg-stone-50',
   },
   otros: {
     label: 'Otros',
-    emoji: '📦',
-    chip: 'bg-teal-50 text-teal-700',
-    chipActive: 'bg-teal-600 text-white',
-    iconBg: 'bg-teal-100',
+    solid: 'bg-teal-600 text-white active:bg-teal-700',
+    outline: 'border-teal-300 text-teal-700 active:bg-teal-50',
   },
-}
-
-// Icono por familia de corte: agrupa por la pieza de la que deriva el producto
-// (todo lo de pierna -> 🍗, todo lo de lomo -> 🥩, etc.).
-export function productEmoji(p: Product): string {
-  const n = p.name.toUpperCase()
-  if (/CANAL/.test(n)) return '🐷'
-  if (/LOMO|FILETE|ESPILOMO/.test(n)) return '🥩'
-  if (/JAMON|PIERNA|PULPA/.test(n)) return '🍗'
-  if (/CUERO|PANZA|TOCINO/.test(n)) return '🥓'
-  if (/CABEZA|CACHETE|OREJA|TROMPA|MASCARA|PAPADA|LENGUA|SESO|MORRO|MOLLEJA/.test(n)) return '🐽'
-  if (/MANO|PATA/.test(n)) return '🦶'
-  if (/COSTILLA|COSTILLAR|PECHO|CHULETA|ESPINAZO/.test(n)) return '🍖'
-  if (/HUESO|CODILLO/.test(n)) return '🦴'
-  if (/RIÑON|RINON|HIGADO|CORAZON|BUCHE|MENUDENCIA|VISCERA|RABO|NANA|PAJARILLA/.test(n)) return '🫀'
-  if (/GRASA|MANTECA|DESGRASE|SEBO/.test(n)) return '🧈'
-  return CATEGORY_META[p.category].emoji
 }
 
 export const PRODUCTS: Product[] = [
