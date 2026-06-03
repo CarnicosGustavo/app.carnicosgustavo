@@ -13,6 +13,22 @@ function App() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<Category>('todos')
 
+  // Empieza un pedido nuevo: limpia todo (se usa en el CEDIS para capturar
+  // varios pedidos seguidos).
+  const handleNewOrder = () => {
+    if (
+      order.totalItems > 0 &&
+      !window.confirm('¿Empezar un pedido nuevo? Se borrará el pedido actual.')
+    ) {
+      return
+    }
+    order.clear()
+    setSearch('')
+    setCategory('todos')
+    setCartOpen(false)
+    window.scrollTo({ top: 0 })
+  }
+
   // Si hay texto de búsqueda, ignorar categoría y buscar en todos
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -41,14 +57,13 @@ function App() {
               <div className="text-sm font-bold text-cg-black">Carnicos Gustavo</div>
               <div className="text-[11px] text-black/50">Hacer pedido</div>
             </div>
-            <a
-              href="https://carnicosgustavo.com"
-              target="_blank"
-              rel="noreferrer"
-              className="shrink-0 text-xs font-semibold text-cg-red"
+            <button
+              type="button"
+              onClick={handleNewOrder}
+              className="shrink-0 rounded-full border border-cg-red/30 bg-cg-red/5 px-3.5 py-2 text-xs font-bold text-cg-red active:bg-cg-red/10"
             >
-              Ver sitio
-            </a>
+              ＋ Pedido nuevo
+            </button>
           </div>
 
           <SearchBar value={search} onChange={setSearch} />

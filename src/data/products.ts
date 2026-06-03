@@ -27,6 +27,99 @@ export const CATEGORIES: { id: Category; label: string }[] = [
   { id: 'otros', label: 'Otros' },
 ]
 
+// Estilo por categoría: emoji + colores (clases completas para que Tailwind las
+// detecte). chip = inactivo, chipActive = seleccionado, iconBg = fondo del icono.
+export type CategoryStyle = {
+  label: string
+  emoji: string
+  chip: string
+  chipActive: string
+  iconBg: string
+}
+
+export const CATEGORY_META: Record<Category, CategoryStyle> = {
+  todos: {
+    label: 'Todos',
+    emoji: '🍽️',
+    chip: 'bg-cg-gray text-cg-black',
+    chipActive: 'bg-cg-black text-white',
+    iconBg: 'bg-cg-gray',
+  },
+  canales: {
+    label: 'Canales',
+    emoji: '🐷',
+    chip: 'bg-rose-50 text-rose-700',
+    chipActive: 'bg-rose-600 text-white',
+    iconBg: 'bg-rose-100',
+  },
+  lomos: {
+    label: 'Lomos',
+    emoji: '🥩',
+    chip: 'bg-red-50 text-red-700',
+    chipActive: 'bg-red-600 text-white',
+    iconBg: 'bg-red-100',
+  },
+  jamones: {
+    label: 'Jamones',
+    emoji: '🍗',
+    chip: 'bg-amber-50 text-amber-700',
+    chipActive: 'bg-amber-500 text-white',
+    iconBg: 'bg-amber-100',
+  },
+  cueros: {
+    label: 'Cueros',
+    emoji: '🥓',
+    chip: 'bg-orange-50 text-orange-700',
+    chipActive: 'bg-orange-500 text-white',
+    iconBg: 'bg-orange-100',
+  },
+  pulpas: {
+    label: 'Pulpas',
+    emoji: '🍖',
+    chip: 'bg-pink-50 text-pink-700',
+    chipActive: 'bg-pink-600 text-white',
+    iconBg: 'bg-pink-100',
+  },
+  visceras: {
+    label: 'Vísceras',
+    emoji: '🫀',
+    chip: 'bg-purple-50 text-purple-700',
+    chipActive: 'bg-purple-600 text-white',
+    iconBg: 'bg-purple-100',
+  },
+  huesos: {
+    label: 'Huesos',
+    emoji: '🦴',
+    chip: 'bg-stone-100 text-stone-700',
+    chipActive: 'bg-stone-600 text-white',
+    iconBg: 'bg-stone-200',
+  },
+  otros: {
+    label: 'Otros',
+    emoji: '📦',
+    chip: 'bg-teal-50 text-teal-700',
+    chipActive: 'bg-teal-600 text-white',
+    iconBg: 'bg-teal-100',
+  },
+}
+
+// Icono por familia de corte: agrupa por la pieza de la que deriva el producto
+// (todo lo de pierna -> 🍗, todo lo de lomo -> 🥩, etc.).
+export function productEmoji(p: Product): string {
+  const n = p.name.toUpperCase()
+  if (/CANAL/.test(n)) return '🐷'
+  if (/LOMO|FILETE|ESPILOMO/.test(n)) return '🥩'
+  if (/JAMON|PIERNA|PULPA/.test(n)) return '🍗'
+  if (/CUERO|PANZA|TOCINO/.test(n)) return '🥓'
+  if (/CABEZA|CACHETE|OREJA|TROMPA|MASCARA|PAPADA|LENGUA|SESO|MORRO|MOLLEJA/.test(n)) return '🐽'
+  if (/MANO|PATA/.test(n)) return '🦶'
+  if (/COSTILLA|COSTILLAR|PECHO|CHULETA|ESPINAZO/.test(n)) return '🍖'
+  if (/HUESO|CODILLO/.test(n)) return '🦴'
+  if (/RIÑON|RINON|HIGADO|CORAZON|BUCHE|MENUDENCIA|VISCERA|RABO|NANA|PAJARILLA/.test(n)) return '🫀'
+  if (/GRASA|MANTECA|DESGRASE|SEBO/.test(n)) return '🧈'
+  return CATEGORY_META[p.category].emoji
+}
+
 export const PRODUCTS: Product[] = [
   // Canales
   { id: 'canal', name: 'CANAL', category: 'canales' },

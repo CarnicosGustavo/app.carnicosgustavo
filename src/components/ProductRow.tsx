@@ -1,4 +1,4 @@
-import type { Product } from '../data/products'
+import { CATEGORY_META, productEmoji, type Product } from '../data/products'
 import type { Unit } from '../hooks/useOrder'
 import { QtyInput } from './QtyInput'
 
@@ -24,19 +24,41 @@ export function ProductRow({
   onSetQuantity,
 }: Props) {
   const inOrder = quantity > 0
+  const meta = CATEGORY_META[product.category]
 
   return (
-    <div className="rounded-xl border border-black/8 bg-white px-3 py-2.5 active:bg-cg-gray/60">
+    <div
+      className={[
+        'rounded-2xl border bg-white px-3 py-3 transition-colors active:bg-cg-gray/60',
+        inOrder ? 'border-cg-red/40 ring-1 ring-cg-red/20' : 'border-black/8',
+      ].join(' ')}
+    >
       <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-bold leading-tight text-cg-black">{product.name}</div>
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <div
+            className={[
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl',
+              meta.iconBg,
+            ].join(' ')}
+            aria-hidden
+          >
+            {productEmoji(product)}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-extrabold leading-tight text-cg-black">
+              {product.name}
+            </div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-black/35">
+              {meta.label}
+            </div>
+          </div>
         </div>
 
         {!inOrder ? (
           <button
             type="button"
             onClick={onAdd}
-            className="shrink-0 rounded-lg bg-cg-red px-3.5 py-2 text-xs font-bold text-white active:bg-cg-red-dark"
+            className="shrink-0 rounded-xl bg-cg-red px-4 py-2.5 text-sm font-bold text-white shadow-sm active:bg-cg-red-dark"
           >
             + Agregar
           </button>
