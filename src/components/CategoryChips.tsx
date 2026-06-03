@@ -17,11 +17,13 @@ export function CategoryChips({ active, onChange }: Props) {
             type="button"
             onClick={() => onChange(cat.id)}
             className={[
-              'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold shadow-sm ring-1 ring-black/5 transition-colors',
-              isActive ? meta.chipActive : meta.chip,
+              'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+              isActive
+                ? 'bg-cg-red text-white'
+                : 'bg-cg-gray text-cg-black active:bg-cg-gray-dark',
             ].join(' ')}
           >
-            <span className="text-base leading-none">{meta.emoji}</span>
+            <span className="text-sm leading-none">{meta.emoji}</span>
             {cat.label}
           </button>
         )

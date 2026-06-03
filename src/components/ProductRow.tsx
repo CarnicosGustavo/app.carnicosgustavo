@@ -1,4 +1,4 @@
-import { CATEGORY_META, productEmoji, type Product } from '../data/products'
+import { productEmoji, type Product } from '../data/products'
 import type { Unit } from '../hooks/useOrder'
 import { QtyInput } from './QtyInput'
 
@@ -24,7 +24,6 @@ export function ProductRow({
   onSetQuantity,
 }: Props) {
   const inOrder = quantity > 0
-  const meta = CATEGORY_META[product.category]
 
   return (
     <div
@@ -34,23 +33,12 @@ export function ProductRow({
       ].join(' ')}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <div
-            className={[
-              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl',
-              meta.iconBg,
-            ].join(' ')}
-            aria-hidden
-          >
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="shrink-0 text-base leading-none" aria-hidden>
             {productEmoji(product)}
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-[15px] font-extrabold leading-tight text-cg-black">
-              {product.name}
-            </div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-black/35">
-              {meta.label}
-            </div>
+          </span>
+          <div className="text-[15px] font-extrabold leading-tight text-cg-black">
+            {product.name}
           </div>
         </div>
 
