@@ -113,7 +113,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     notes: notes || null,
     location_label: locationLabel || null,
     items,
-    items_count: items.reduce((acc, it) => acc + it.quantity, 0),
+    // Número de productos (líneas), no la suma de cantidades: la columna es
+    // integer y las cantidades pueden ser decimales (kg/gramos).
+    items_count: items.length,
     user_agent: asString(req.headers?.['user-agent']) || null,
     whatsapp_message: null,
   }
