@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { BUSINESS, CONTACT } from '../config'
 import type { OrderItem, Unit } from '../hooks/useOrder'
 import { buildWhatsAppMessage, buildWhatsAppUrl } from '../lib/whatsapp'
+import { lookupLastOrder, type Recognized } from '../lib/recognition'
+import { Logo, WAGlyph } from './Logo'
 import { QtyInput } from './QtyInput'
 
 type SaveState = 'idle' | 'saving' | 'success' | 'error'
@@ -10,6 +12,8 @@ type SaveState = 'idle' | 'saving' | 'success' | 'error'
 type Props = {
   open: boolean
   items: OrderItem[]
+  initialPhone?: string
+  recognized?: Recognized | null
   onClose: () => void
   onIncrement: (id: string) => void
   onDecrement: (id: string) => void
@@ -21,6 +25,20 @@ type Props = {
 }
 
 const CUSTOMER_STORAGE_KEY = 'cg_pedido_customer_v1'
+
+// Códigos postales precargados: CDMX + Estado de México (alcaldía/municipio).
+const CP_LIST: [string, string][] = [
+  ['06000', 'Centro · Cuauhtémoc'], ['06700', 'Roma Norte · Cuauhtémoc'], ['06140', 'Condesa · Cuauhtémoc'],
+  ['03100', 'Del Valle · Benito Juárez'], ['03020', 'Narvarte · Benito Juárez'], ['11000', 'Lomas · Miguel Hidalgo'],
+  ['11560', 'Polanco · Miguel Hidalgo'], ['01000', 'San Ángel · Álvaro Obregón'], ['04000', 'Centro · Coyoacán'],
+  ['04100', 'Del Carmen · Coyoacán'], ['02000', 'Azcapotzalco'], ['07700', 'Lindavista · G.A. Madero'],
+  ['08000', 'Centro · Iztacalco'], ['09000', 'Centro · Iztapalapa'], ['14000', 'Centro · Tlalpan'],
+  ['16000', 'Centro · Xochimilco'], ['05000', 'Cuajimalpa'], ['15000', 'Moctezuma · V. Carranza'],
+  ['53000', 'Centro · Naucalpan'], ['53100', 'Satélite · Naucalpan'], ['54000', 'Centro · Tlalnepantla'],
+  ['52900', 'Atizapán de Zaragoza'], ['52780', 'Interlomas · Huixquilucan'], ['54700', 'Cuautitlán Izcalli'],
+  ['55000', 'Centro · Ecatepec'], ['57000', 'Nezahualcóyotl'], ['55700', 'Coacalco'], ['54900', 'Tultitlán'],
+  ['56500', 'Los Reyes · La Paz'], ['50000', 'Centro · Toluca'], ['52140', 'Metepec'], ['56600', 'Chalco'],
+]
 
 function loadCustomer() {
   try {
@@ -38,9 +56,90 @@ function loadCustomer() {
   }
 }
 
+type IconName = 'user' | 'store' | 'phone' | 'pin' | 'note'
+function Icon({ name, className = '' }: { name: IconName; className?: string }) {
+  const paths: Record<IconName, string> = {
+    user: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1',
+    store: 'M4 9V5h16v4M4 9l-1 3h18l-1-3M5 12v7h14v-7',
+    phone: 'M3 5a2 2 0 012-2h2l2 5-2 1a11 11 0 005 5l1-2 5 2v2a2 2 0 01-2 2A16 16 0 013 5z',
+    pin: 'M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11zM12 12a2.5 2.5 0 100-5 2.5 2.5 0 000 5z',
+    note: 'M5 4h11l3 3v13H5zM9 4v5h7',
+  }
+  return (
+    <svg className={className} width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <path d={paths[name]} />
+    </svg>
+  )
+}
+
+function Field({
+  icon,
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+  valid,
+  list,
+  inputMode,
+  maxLength,
+  area,
+}: {
+  icon: IconName
+  value: string
+  onChange: (v: string) => void
+  onBlur?: () => void
+  placeholder: string
+  valid?: boolean
+  list?: string
+  inputMode?: 'tel' | 'numeric' | 'text'
+  maxLength?: number
+  area?: boolean
+}) {
+  return (
+    <div
+      className={[
+        'flex gap-2.5 rounded-xl border bg-paper2 transition-colors',
+        area ? 'items-start px-3 py-3' : 'items-center px-3',
+        valid ? 'border-green bg-green-wash' : 'border-line/12',
+      ].join(' ')}
+    >
+      <span className={['shrink-0', valid ? 'text-green' : 'text-ink-soft', area ? 'pt-0.5' : ''].join(' ')}>
+        <Icon name={icon} />
+      </span>
+      {area ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={2}
+          className="w-full resize-none bg-transparent text-sm font-medium text-ink outline-none placeholder:text-ink-faint"
+        />
+      ) : (
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          placeholder={placeholder}
+          list={list}
+          inputMode={inputMode}
+          maxLength={maxLength}
+          className="w-full bg-transparent py-3 text-sm font-medium text-ink outline-none placeholder:text-ink-faint"
+        />
+      )}
+      {valid && !area && (
+        <svg className="h-4 w-4 shrink-0 text-green" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      )}
+    </div>
+  )
+}
+
 export function CartSheet({
   open,
   items,
+  initialPhone,
+  recognized,
   onClose,
   onIncrement,
   onDecrement,
@@ -53,61 +152,35 @@ export function CartSheet({
   const customer = useRef(loadCustomer())
   const [businessName, setBusinessName] = useState(customer.current.businessName)
   const [contactName, setContactName] = useState(customer.current.contactName)
-  const [phone, setPhone] = useState(customer.current.phone)
+  const [phone, setPhone] = useState(initialPhone || customer.current.phone)
   const [deliveryAddress, setDeliveryAddress] = useState(customer.current.deliveryAddress)
   const [notes, setNotes] = useState(customer.current.notes)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [saveError, setSaveError] = useState('')
   const [orderNumber, setOrderNumber] = useState<number | null>(null)
-
-  // "Repetir pedido anterior" por teléfono
-  const [lastOrder, setLastOrder] = useState<{
-    businessName: string
-    contactName: string
-    deliveryAddress: string
-    items: OrderItem[]
-  } | null>(null)
+  const [lastOrder, setLastOrder] = useState<Recognized | null>(recognized ?? null)
   const [lookupDone, setLookupDone] = useState(false)
 
-  // Busca el último pedido cuando el cliente termina de escribir el teléfono
-  async function lookupLastOrder(phoneArg?: string) {
-    const digits = (phoneArg ?? phone).replace(/[^\d]/g, '')
-    if (digits.length < 7) return
-    try {
-      const resp = await fetch(`/api/last-order?phone=${encodeURIComponent(digits)}`)
-      const data = (await resp.json()) as {
-        ok?: boolean
-        found?: boolean
-        order?: {
-          businessName: string
-          contactName: string
-          deliveryAddress: string
-          items: { productId: string; name: string; quantity: number; unit?: string }[]
-        }
-      }
-      setLookupDone(true)
-      if (data.found && data.order) {
-        setLastOrder({
-          businessName: data.order.businessName,
-          contactName: data.order.contactName,
-          deliveryAddress: data.order.deliveryAddress,
-          items: data.order.items.map((it) => ({
-            productId: it.productId,
-            name: it.name,
-            quantity: it.quantity,
-            unit: it.unit === 'kg' ? 'kg' : 'piezas',
-          })),
-        })
-        // Autocompletar datos del negocio si están vacíos
-        if (!businessName && data.order.businessName) setBusinessName(data.order.businessName)
-        if (!contactName && data.order.contactName) setContactName(data.order.contactName)
-        if (!deliveryAddress && data.order.deliveryAddress)
-          setDeliveryAddress(data.order.deliveryAddress)
-      } else {
-        setLastOrder(null)
-      }
-    } catch {
-      setLookupDone(true)
+  // Prefill con el cliente reconocido en la bienvenida.
+  useEffect(() => {
+    if (recognized) {
+      setLastOrder(recognized)
+      setBusinessName((b) => b || recognized.businessName)
+      setContactName((c) => c || recognized.contactName)
+      setDeliveryAddress((d) => d || recognized.deliveryAddress || '')
+    }
+    // solo al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function lookup() {
+    const r = await lookupLastOrder(phone)
+    setLookupDone(true)
+    setLastOrder(r)
+    if (r) {
+      if (!businessName) setBusinessName(r.businessName)
+      if (!contactName) setContactName(r.contactName)
+      if (!deliveryAddress && r.deliveryAddress) setDeliveryAddress(r.deliveryAddress)
     }
   }
 
@@ -118,24 +191,6 @@ export function CartSheet({
     }
   }
 
-  // Pre-rellena el teléfono si viene en el link (?tel= o ?phone=) y busca su
-  // pedido anterior. Permite mandar links personalizados por WhatsApp = cero fricción.
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search)
-      const urlPhone = (params.get('tel') ?? params.get('phone') ?? '').replace(/[^\d]/g, '')
-      if (urlPhone.length >= 7) {
-        setPhone(urlPhone)
-        lookupLastOrder(urlPhone)
-      }
-    } catch {
-      /* noop */
-    }
-    // Solo al montar
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Guardar datos del cliente en localStorage
   useEffect(() => {
     localStorage.setItem(
       CUSTOMER_STORAGE_KEY,
@@ -143,13 +198,8 @@ export function CartSheet({
     )
   }, [businessName, contactName, phone, deliveryAddress, notes])
 
-  // Prevenir scroll del body cuando el sheet esta abierto
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    document.body.style.overflow = open ? 'hidden' : ''
     return () => {
       document.body.style.overflow = ''
     }
@@ -158,16 +208,12 @@ export function CartSheet({
   if (!open) return null
 
   const totalItems = items.reduce((a, x) => a + x.quantity, 0)
-  const missing: string[] = []
-  if (!businessName.trim()) missing.push('Negocio')
-  if (!contactName.trim()) missing.push('Contacto')
-  if (!phone.trim()) missing.push('Telefono')
-  const formValid = missing.length === 0 && items.length > 0
+  // Requeridos: Contacto + WhatsApp. Negocio y CP opcionales.
+  const formValid = !!contactName.trim() && !!phone.trim() && items.length > 0
+  const hasWhatsApp = CONTACT.whatsappPhoneE164.replace(/[^\d]/g, '').length >= 11
 
-  const hasWhatsApp =
-    CONTACT.whatsappPhoneE164.replace(/[^\d]/g, '').length >= 11
-
-  async function handleSave() {
+  // Un solo paso: guarda en el sistema y abre WhatsApp con el pedido listo.
+  async function handleSend() {
     if (!formValid) return
     setSaveState('saving')
     setSaveError('')
@@ -176,208 +222,149 @@ export function CartSheet({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          businessName,
-          contactName,
-          phone,
-          deliveryAddress,
-          notes,
-          locationLabel: BUSINESS.locationLabel,
-          items,
+          businessName, contactName, phone, deliveryAddress, notes,
+          locationLabel: BUSINESS.locationLabel, items,
         }),
       })
       if (!resp.ok) {
         const data = (await resp.json().catch(() => ({}))) as { error?: string }
         throw new Error(data.error || `HTTP ${resp.status}`)
       }
-      const data = (await resp.json()) as { ok?: boolean; id?: string; orderNumber?: number | null }
+      const data = (await resp.json()) as { id?: string; orderNumber?: number | null }
       if (!data.id) throw new Error('Sin ID')
-      setOrderNumber(data.orderNumber ?? null)
+      const num = data.orderNumber ?? null
+      setOrderNumber(num)
       setSaveState('success')
+      if (hasWhatsApp) openWhatsApp(num)
     } catch (e) {
       setSaveState('error')
       setSaveError(e instanceof Error ? e.message : 'Error al guardar')
     }
   }
 
-  function handleWhatsApp() {
+  function openWhatsApp(num: number | null = orderNumber) {
     const message = buildWhatsAppMessage({
       checkout: { businessName, contactName, phone, deliveryAddress, notes },
-      items,
-      locationLabel: BUSINESS.locationLabel,
-      orderNumber,
+      items, locationLabel: BUSINESS.locationLabel, orderNumber: num,
     })
-    const url = buildWhatsAppUrl(CONTACT.whatsappPhoneE164, message)
-    window.open(url, '_blank', 'noopener,noreferrer')
+    window.open(buildWhatsAppUrl(CONTACT.whatsappPhoneE164, message), '_blank', 'noopener,noreferrer')
   }
 
   function handleNewOrder() {
-    setSaveState('idle')
-    setSaveError('')
-    setOrderNumber(null)
-    setNotes('')
+    setSaveState('idle'); setSaveError(''); setOrderNumber(null); setNotes('')
     onClear()
   }
 
+  const cpValid = /^\d{5}$/.test(deliveryAddress.trim())
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col">
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/55" onClick={onClose} />
 
-      {/* Sheet */}
-      <div className="relative mt-auto flex max-h-[92svh] w-full flex-col rounded-t-2xl bg-white shadow-xl">
-        {/* Handle + Header */}
-        <div className="shrink-0 border-b border-black/8 px-4 pb-3 pt-3">
-          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-black/15" />
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-base font-bold text-cg-black">Tu pedido</div>
-              <div className="text-xs text-black/50">
-                {items.length} productos, {totalItems} piezas
+      <div className="relative mt-auto flex max-h-[93svh] w-full flex-col rounded-t-2xl bg-bg shadow-sheet sm:mx-auto sm:max-w-md">
+        {saveState === 'success' ? (
+          /* ── Éxito: colores de la plataforma (claro/oscuro), sin azul ── */
+          <div className="overflow-y-auto">
+            <div className="bg-bg px-6 pb-7 pt-7">
+              <div className="mb-4 flex justify-center">
+                <Logo size={50} />
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-cg-gray text-lg text-black/60 active:bg-cg-gray-dark"
-              aria-label="Cerrar"
-            >
-              x
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto overscroll-contain">
-          {saveState === 'success' ? (
-            /* Pantalla de exito estilo confirmacion de WhatsApp */
-            <div
-              className="flex flex-col gap-4 p-5"
-              style={{ background: '#ECE5DD' }}
-            >
-              {/* Burbuja tipo mensaje enviado de WhatsApp */}
               <div className="flex justify-end">
-                <div
-                  className="max-w-[85%] rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm"
-                  style={{ background: '#DCF8C6' }}
-                >
-                  <div className="text-sm font-bold text-cg-black">
+                <div className="max-w-[86%] rounded-2xl rounded-br-sm border border-green/40 bg-green-wash px-4 py-3 shadow-soft">
+                  <div className="text-[15px] font-extrabold text-ink">
                     Pedido recibido{orderNumber ? ` #${orderNumber}` : ''}
                   </div>
-                  <div className="mt-1 text-[13px] leading-snug text-black/70">
-                    {items.length} productos · {totalItems} unidades. Te
-                    contactaremos para confirmar.
+                  <div className="mt-1 text-[13px] leading-snug text-ink-soft">
+                    {items.length} productos · {totalItems} unidades. Te contactamos para confirmar y dar precio.
                   </div>
-                  <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-black/40">
+                  <div className="mt-1.5 flex items-center justify-end gap-1 text-[10px] font-semibold text-green">
                     Enviado
-                    {/* doble check de WhatsApp */}
                     <svg className="h-3.5 w-3.5" viewBox="0 0 18 18" fill="none">
-                      <path d="M3 9.5l2.5 2.5L10 7" stroke="#34B7F1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M7 9.5l2.5 2.5L14 7" stroke="#34B7F1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M3 9.5l2.5 2.5L10 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M7 9.5l2.5 2.5L14 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 </div>
               </div>
-
-              <div className="text-center text-[12px] font-medium text-black/50">
-                Confirma tu pedido enviándolo por WhatsApp 👇
-              </div>
-
+            </div>
+            <div className="flex flex-col gap-3 bg-bg px-6 pb-7">
               {hasWhatsApp && (
-                <button
-                  type="button"
-                  onClick={handleWhatsApp}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-4 text-base font-bold text-white shadow-md active:brightness-90"
-                >
-                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                  </svg>
-                  Enviar mi pedido por WhatsApp
-                </button>
+                <>
+                  <div className="text-center text-xs font-medium text-ink-soft">
+                    ¿No se abrió el chat? Vuelve a enviarlo 👇
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openWhatsApp()}
+                    className="cg-tap flex w-full items-center justify-center gap-2.5 rounded-2xl bg-wa px-4 py-4 text-base font-extrabold text-white shadow-soft active:brightness-95"
+                  >
+                    <WAGlyph size={22} /> Abrir WhatsApp
+                  </button>
+                </>
               )}
-
               <button
                 type="button"
                 onClick={handleNewOrder}
-                className="w-full rounded-xl border border-black/12 bg-white px-4 py-3 text-sm font-bold text-cg-black active:bg-cg-gray"
+                className="cg-tap w-full rounded-2xl border border-line/15 bg-paper px-4 py-3.5 text-sm font-bold text-ink"
               >
                 Hacer otro pedido
               </button>
             </div>
-          ) : (
-            <>
-              {/* Lista de items */}
-              <div className="border-b border-black/8 p-4">
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="shrink-0 border-b border-line/10 px-4 pb-3 pt-3">
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line/20" />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <Logo size={40} />
+                  <div className="min-w-0">
+                    <div className="font-display text-[22px] leading-none text-ink">TU PEDIDO</div>
+                    <div className="mt-1 text-xs font-semibold text-ink-soft">
+                      {items.length} productos · {totalItems} unidades
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="cg-tap flex h-9 w-9 items-center justify-center rounded-full border border-line/15 bg-paper text-ink-soft"
+                  aria-label="Cerrar"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="flex-1 overflow-y-auto overscroll-contain">
+              {/* Items */}
+              <div className="border-b border-line/10 p-4">
                 {items.length === 0 ? (
-                  <div className="rounded-xl bg-cg-gray p-4 text-center text-sm text-black/50">
-                    Agrega productos desde el catalogo
+                  <div className="rounded-xl bg-paper2 p-4 text-center text-sm text-ink-soft">
+                    Agrega productos desde el catálogo.
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {items.map((item) => (
-                      <div
-                        key={item.productId}
-                        className="rounded-lg bg-cg-gray/60 px-3 py-2"
-                      >
+                      <div key={item.productId} className="rounded-xl bg-paper px-3 py-2.5">
                         <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-semibold leading-tight text-cg-black">
-                              {item.name}
-                            </div>
+                          <div className="min-w-0 flex-1 text-xs font-bold uppercase leading-tight text-ink">
+                            {item.name}
                           </div>
                           <div className="flex shrink-0 items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => onDecrement(item.productId)}
-                              className="flex h-8 w-8 items-center justify-center rounded-md border border-black/10 text-sm font-bold active:bg-white"
-                            >
-                              -
-                            </button>
-                            <QtyInput
-                            value={item.quantity}
-                            onChange={(q) => onSetQuantity(item.productId, q)}
-                            className="h-8 w-14 rounded-md border border-black/10 text-center text-sm font-bold outline-none focus:border-cg-red"
-                          />
-                            <button
-                              type="button"
-                              onClick={() => onIncrement(item.productId)}
-                              className="flex h-8 w-8 items-center justify-center rounded-md bg-cg-red text-sm font-bold text-white active:bg-cg-red-dark"
-                            >
-                              +
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onRemove(item.productId)}
-                              className="ml-1 flex h-8 w-8 items-center justify-center rounded-md text-black/30 active:text-red-500"
-                              aria-label="Eliminar"
-                            >
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
+                            <button type="button" onClick={() => onDecrement(item.productId)} className="cg-tap flex h-8 w-8 items-center justify-center rounded-md border border-line/15 text-sm font-bold text-ink">−</button>
+                            <QtyInput value={item.quantity} onChange={(q) => onSetQuantity(item.productId, q)} className="h-8 w-14 rounded-md border border-line/15 bg-paper2 text-center font-mono text-sm font-bold text-ink outline-none focus:border-red" />
+                            <button type="button" onClick={() => onIncrement(item.productId)} className="cg-tap flex h-8 w-8 items-center justify-center rounded-md bg-red text-sm font-bold text-white">+</button>
+                            <button type="button" onClick={() => onRemove(item.productId)} className="ml-0.5 flex h-8 w-8 items-center justify-center rounded-md text-ink-faint active:text-red" aria-label="Eliminar">
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.9 12.1A2 2 0 0116.1 21H7.9a2 2 0 01-2-1.9L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
                         </div>
-                        {/* Selector de unidad por item */}
-                        <div className="mt-1.5 inline-flex overflow-hidden rounded-md border border-black/10">
-                          <button
-                            type="button"
-                            onClick={() => onSetUnit(item.productId, 'piezas')}
-                            className={[
-                              'px-2.5 py-0.5 text-[11px] font-bold transition-colors',
-                              item.unit === 'piezas' ? 'bg-cg-red text-white' : 'bg-white text-cg-black',
-                            ].join(' ')}
-                          >
-                            Piezas
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onSetUnit(item.productId, 'kg')}
-                            className={[
-                              'px-2.5 py-0.5 text-[11px] font-bold transition-colors',
-                              item.unit === 'kg' ? 'bg-cg-red text-white' : 'bg-white text-cg-black',
-                            ].join(' ')}
-                          >
-                            Kg
-                          </button>
+                        <div className="mt-1.5 inline-flex overflow-hidden rounded-md border border-line/15">
+                          <button type="button" onClick={() => onSetUnit(item.productId, 'piezas')} className={['px-2.5 py-0.5 text-[11px] font-bold transition-colors', item.unit === 'piezas' ? 'bg-red text-white' : 'bg-paper text-ink-soft'].join(' ')}>Piezas</button>
+                          <button type="button" onClick={() => onSetUnit(item.productId, 'kg')} className={['px-2.5 py-0.5 text-[11px] font-bold transition-colors', item.unit === 'kg' ? 'bg-red text-white' : 'bg-paper text-ink-soft'].join(' ')}>Kg</button>
                         </div>
                       </div>
                     ))}
@@ -385,102 +372,69 @@ export function CartSheet({
                 )}
               </div>
 
-              {/* Formulario de datos */}
+              {/* Datos */}
               <div className="p-4">
-                <div className="mb-3 text-sm font-bold text-cg-black">Datos de contacto</div>
-                <div className="flex flex-col gap-3">
-                  <input
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder="Nombre del negocio *"
-                    className="w-full rounded-xl border border-black/10 bg-cg-gray px-4 py-3 text-sm outline-none placeholder:text-black/40 focus:border-cg-red"
-                  />
-                  <input
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    placeholder="Nombre de contacto *"
-                    className="w-full rounded-xl border border-black/10 bg-cg-gray px-4 py-3 text-sm outline-none placeholder:text-black/40 focus:border-cg-red"
-                  />
-                  <input
-                    value={phone}
-                    onChange={(e) => {
-                      setPhone(e.target.value)
-                      setLookupDone(false)
-                      setLastOrder(null)
-                    }}
-                    onBlur={() => lookupLastOrder()}
-                    placeholder="Telefono *"
-                    inputMode="tel"
-                    className="w-full rounded-xl border border-black/10 bg-cg-gray px-4 py-3 text-sm outline-none placeholder:text-black/40 focus:border-cg-red"
-                  />
+                <div className="mb-2.5 text-xs font-bold uppercase tracking-wide text-ink-faint">Datos de contacto</div>
+                <datalist id="cgCP">
+                  {CP_LIST.map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
+                </datalist>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <Field icon="user" value={contactName} onChange={setContactName} placeholder="Contacto *" valid={!!contactName.trim()} />
+                  <Field icon="store" value={businessName} onChange={setBusinessName} placeholder="Negocio (opcional)" valid={!!businessName.trim()} />
+                  <Field icon="phone" value={phone} onChange={(v) => { setPhone(v); setLookupDone(false); setLastOrder(null) }} onBlur={lookup} placeholder="WhatsApp *" inputMode="tel" valid={phone.replace(/[^\d]/g, '').length >= 10} />
+                  <Field icon="pin" value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Código Postal" list="cgCP" inputMode="numeric" maxLength={5} valid={cpValid} />
+                </div>
 
-                  {/* Banner repetir pedido anterior */}
-                  {lastOrder && lastOrder.items.length > 0 && (
-                    <div className="rounded-xl border border-cg-red/20 bg-cg-red/5 p-3">
-                      <div className="text-xs font-bold text-cg-black">
-                        Encontramos tu pedido anterior
-                      </div>
-                      <div className="mt-0.5 text-[11px] text-black/50">
-                        {lastOrder.items.length} productos
-                        {lastOrder.businessName ? ` · ${lastOrder.businessName}` : ''}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={repeatLastOrder}
-                        className="mt-2 w-full rounded-lg bg-cg-red px-3 py-2 text-xs font-bold text-white active:bg-cg-red-dark"
-                      >
-                        Repetir pedido anterior
-                      </button>
-                    </div>
-                  )}
-                  {lookupDone && !lastOrder && phone.replace(/[^\d]/g, '').length >= 7 && (
-                    <div className="text-[11px] text-black/40">
-                      Sin pedidos anteriores con este teléfono.
-                    </div>
-                  )}
-                  <input
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    placeholder="Direccion de entrega (opcional)"
-                    className="w-full rounded-xl border border-black/10 bg-cg-gray px-4 py-3 text-sm outline-none placeholder:text-black/40 focus:border-cg-red"
-                  />
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Notas: cortes especiales, horario de entrega..."
-                    rows={2}
-                    className="w-full resize-none rounded-xl border border-black/10 bg-cg-gray px-4 py-3 text-sm outline-none placeholder:text-black/40 focus:border-cg-red"
-                  />
+                {lastOrder && lastOrder.items.length > 0 && (
+                  <div className="cg-fade mt-2.5 rounded-xl border border-green/40 bg-green-wash p-3">
+                    <div className="text-xs font-bold text-ink">Bienvenido {lastOrder.businessName || 'de nuevo'}</div>
+                    <div className="mt-0.5 text-[11px] text-ink-soft">Tu último pedido tiene {lastOrder.items.length} productos.</div>
+                    <button type="button" onClick={repeatLastOrder} className="cg-tap mt-2 w-full rounded-lg bg-green px-3 py-2 text-xs font-bold text-white">
+                      Repetir su último pedido
+                    </button>
+                  </div>
+                )}
+                {lookupDone && !lastOrder && phone.replace(/[^\d]/g, '').length >= 7 && (
+                  <div className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-faint">
+                    WhatsApp nuevo — te damos de alta con este pedido.
+                  </div>
+                )}
+
+                <div className="mt-2.5">
+                  <Field icon="note" area value={notes} onChange={setNotes} placeholder="Notas: cortes especiales, horario…" />
                 </div>
 
                 {saveState === 'error' && saveError && (
-                  <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
-                    Error: {saveError}
-                  </div>
-                )}
-
-                {!formValid && missing.length > 0 && (
-                  <div className="mt-2 text-xs text-black/40">
-                    Faltan: {missing.join(', ')}
-                  </div>
+                  <div className="mt-3 rounded-xl border border-red/30 bg-red/10 px-4 py-2 text-xs text-red">Error: {saveError}</div>
                 )}
               </div>
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* Footer sticky */}
-        {saveState !== 'success' && (
-          <div className="shrink-0 border-t border-black/8 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-            <button
-              type="button"
-              disabled={!formValid || saveState === 'saving'}
-              onClick={handleSave}
-              className="w-full rounded-xl bg-cg-red px-4 py-3.5 text-sm font-bold text-white disabled:opacity-40 active:bg-cg-red-dark"
-            >
-              {saveState === 'saving' ? 'Enviando...' : `Enviar pedido (${totalItems} pzas)`}
-            </button>
-          </div>
+            {/* Footer — un solo botón verde (guarda + abre WhatsApp) */}
+            <div className="shrink-0 border-t border-line/10 bg-paper px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+              <button
+                type="button"
+                disabled={!formValid || saveState === 'saving'}
+                onClick={handleSend}
+                className="cg-tap flex w-full items-center justify-center gap-3 rounded-2xl bg-wa px-4 py-3.5 text-white shadow-soft disabled:opacity-40"
+              >
+                <WAGlyph size={23} />
+                <span className="flex flex-col items-start leading-tight">
+                  <span className="text-base font-extrabold">
+                    {saveState === 'saving' ? 'Enviando…' : `Enviar por WhatsApp${items.length > 0 ? ` · ${totalItems} pzas` : ''}`}
+                  </span>
+                  <span className="text-[11px] font-semibold text-white/85">Te abrimos el chat con tu pedido listo</span>
+                </span>
+              </button>
+              {items.length > 0 && (
+                <div className="mt-2 text-center text-[11px] font-medium text-ink-faint">
+                  Al volver, tu pedido sigue guardado aquí.
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>

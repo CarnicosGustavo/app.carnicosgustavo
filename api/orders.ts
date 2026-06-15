@@ -87,7 +87,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   const body = (await readBody(req)) as Record<string, unknown>
 
-  const businessName = asString(body.businessName).trim()
+  const businessNameRaw = asString(body.businessName).trim()
   const contactName = asString(body.contactName).trim()
   const phone = asString(body.phone).trim()
   const deliveryAddress = asString(body.deliveryAddress).trim()
@@ -95,7 +95,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   const locationLabel = asString(body.locationLabel).trim()
   const items = asItems(body.items)
 
-  if (!businessName || !contactName || !phone || items.length === 0) {
+  const businessName = businessNameRaw || contactName
+  if (!contactName || !phone || items.length === 0) {
     json(res, 400, { ok: false, error: 'Missing required fields' })
     return
   }

@@ -7,5 +7,5 @@ export const BUSINESS = {
 }
 
 export const CONTACT = {
-  whatsappPhoneE164: env.VITE_WHATSAPP_PHONE?.trim() || '',
+  whatsappPhoneE164: env.VITE_WHATSAPP_PHONE?.trim() || '525543287020',
 }

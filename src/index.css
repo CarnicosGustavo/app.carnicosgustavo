@@ -1,19 +1,62 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html {
+/* ============================================================
+   Tema cálido Cárnicos Gustavo — variables por tema (canales RGB)
+   El tema se fija en <html data-theme="dark|light"> (ver index.html
+   y src/theme.ts). Oscuro es el predeterminado.
+   ============================================================ */
+:root,
+[data-theme='dark'] {
+  --bg: 26 23 20;          /* #1A1714 */
+  --paper: 36 31 27;       /* #241F1B */
+  --paper2: 44 38 33;      /* #2C2621 */
+  --ink: 241 231 214;      /* #F1E7D6 */
+  --ink-soft: 169 158 143; /* #A99E8F */
+  --ink-faint: 120 110 98; /* #786E62 */
+  --line: 241 231 214;     /* usado con opacidad: border-line/15 */
+  --red: 218 87 66;        /* #DA5742 */
+  --red-dark: 184 64 46;   /* #B8402E */
+  --green: 92 168 119;     /* #5CA877 */
+  --green-wash: 33 48 42;  /* #21302A */
+  --chrome: 16 14 12;      /* #100E0C */
+  --chrome-fg: 241 231 214;/* #F1E7D6 */
+  --wa: 37 211 102;        /* #25D366 */
+  --wa-dark: 31 174 84;    /* #1FAE54 */
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --bg: 236 229 216;       /* #ECE5D8 */
+  --paper: 251 247 239;    /* #FBF7EF */
+  --paper2: 244 238 225;   /* #F4EEE1 */
+  --ink: 33 28 25;         /* #211C19 */
+  --ink-soft: 107 98 90;   /* #6B625A */
+  --ink-faint: 154 144 135;/* #9A9087 */
+  --line: 33 28 25;        /* usado con opacidad */
+  --red: 158 51 38;        /* #9E3326 */
+  --red-dark: 130 40 30;   /* #82281E */
+  --green: 63 125 84;      /* #3F7D54 */
+  --green-wash: 226 236 223;/* #E2ECDF */
+  --chrome: 33 28 25;      /* #211C19 */
+  --chrome-fg: 241 231 214;/* #F1E7D6 */
+  --wa: 37 211 102;
+  --wa-dark: 31 174 84;
   color-scheme: light;
+}
+
+html {
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
   margin: 0;
-  font-family: Inter, system-ui, 'Segoe UI', Roboto, sans-serif;
-  background: #ffffff;
-  color: #1a1a1a;
+  font-family: Archivo, system-ui, 'Segoe UI', Roboto, sans-serif;
+  background: rgb(var(--bg));
+  color: rgb(var(--ink));
   overscroll-behavior-y: contain;
 }
 
@@ -22,20 +65,16 @@ body {
 }
 
 /* Ocultar scrollbar en chips horizontales */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Input numérico sin flechas */
-input[type='number']::-webkit-inner-spin-button,
-input[type='number']::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+/* Animación de entrada suave para tarjetas (reconocido / repetir) */
+@keyframes cg-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
-input[type='number'] {
-  -moz-appearance: textfield;
-}
+.cg-fade { animation: cg-fade 0.32s ease both; }
+
+/* Realimentación táctil */
+.cg-tap { transition: filter 0.15s, transform 0.1s; }
+.cg-tap:active { transform: scale(0.975); }

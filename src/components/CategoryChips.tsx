@@ -16,10 +16,10 @@ export function CategoryChips({ active, onChange }: Props) {
             type="button"
             onClick={() => onChange(cat.id)}
             className={[
-              'shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+              'cg-tap shrink-0 rounded-full px-4 py-2 text-sm font-bold transition-colors',
               isActive
-                ? 'bg-cg-red text-white'
-                : 'bg-cg-gray text-cg-black active:bg-cg-gray-dark',
+                ? 'bg-red text-white shadow-soft'
+                : 'bg-paper2 text-ink-soft border border-line/12',
             ].join(' ')}
           >
             {cat.label}

@@ -1,12 +1,21 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#C62828" />
+    <meta name="theme-color" content="#1A1714" />
     <meta name="description" content="Haz tu pedido de productos de cerdo - Carnicos Gustavo" />
     <link rel="icon" type="image/png" href="/images/favicon_cerdo.png" />
     <title>Pedidos - Carnicos Gustavo</title>
+    <!-- Anti-flash: aplica el tema guardado antes del primer paint -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('cg_theme_v1');
+          document.documentElement.dataset.theme = t === 'light' ? 'light' : 'dark';
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
